@@ -9,6 +9,7 @@ export default function ProfileScreen({ setIsLoggedIn }) {
         text: "Logout",
         onPress: async () => {
           await AsyncStorage.removeItem("token");
+          await AsyncStorage.removeItem("workspaceId");
 
           setIsLoggedIn(false); // ✅ THIS is key
         },
