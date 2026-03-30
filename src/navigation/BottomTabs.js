@@ -10,7 +10,7 @@ import ProfileScreen from "../screens/ProfileScreen";
 const Tab = createBottomTabNavigator();
 const isAdmin = true; // change later from backend
 
-export default function BottomTabs() {
+export default function BottomTabs({ setIsLoggedIn }) {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -36,7 +36,11 @@ export default function BottomTabs() {
       {isAdmin && (
         <Tab.Screen name="Users" component={UsersScreen} />
       )}
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Profile">
+        {(props) => (
+          <ProfileScreen {...props} setIsLoggedIn={setIsLoggedIn} />
+        )}
+      </Tab.Screen>
     </Tab.Navigator>
   );
 }

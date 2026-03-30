@@ -1,12 +1,25 @@
-import { View, Text } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { View, Text, Button, Alert } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ setIsLoggedIn }) {
+  const handleLogout = () => {
+    Alert.alert("Logout", "Are you sure?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        onPress: async () => {
+          await AsyncStorage.removeItem("token");
+
+          setIsLoggedIn(false); // ✅ THIS is key
+        },
+      },
+    ]);
+  };
+
   return (
-    <SafeAreaView style={{ flex: 1, padding: 20 }}>
-        <View>
-            <Text>Profile Screen</Text>
-        </View>
-    </SafeAreaView>
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <Text>Profile Screen</Text>
+      <Button title="Logout" onPress={handleLogout} />
+    </View>
   );
 }

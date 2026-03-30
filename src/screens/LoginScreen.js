@@ -2,9 +2,10 @@ import { useState } from "react";
 import { View, Text, TextInput, Button, Alert } from "react-native";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen({ navigation, setIsLoggedIn }) {
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
 
@@ -21,7 +22,10 @@ export default function LoginScreen({ navigation }) {
 
       Alert.alert("Success", "Login successful");
 
-      navigation.replace("Main");
+      if (setIsLoggedIn) {
+        setIsLoggedIn(true);
+      }
+
     } catch (err) {
       Alert.alert("Error", "Invalid credentials");
     }
