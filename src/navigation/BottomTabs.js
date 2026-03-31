@@ -8,22 +8,21 @@ import UsersScreen from "../screens/UsersScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 
 const Tab = createBottomTabNavigator();
-const isAdmin = true; // change later from backend
+const isAdmin = true;
 
-export default function BottomTabs({ setIsLoggedIn }) {
+export default function BottomTabs({ setIsLoggedIn, initialTab = "Workspace" }) {
   return (
     <Tab.Navigator
+      initialRouteName={initialTab} // ✅ this is all it takes
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarIcon: ({ color, size }) => {
           let iconName;
-
           if (route.name === "Workspace") iconName = "business";
           else if (route.name === "ToDo") iconName = "list";
           else if (route.name === "Completed") iconName = "checkmark-done";
           else if (route.name === "Users") iconName = "people";
           else if (route.name === "Profile") iconName = "person";
-
           return <Ionicons name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: "blue",
@@ -33,13 +32,9 @@ export default function BottomTabs({ setIsLoggedIn }) {
       <Tab.Screen name="Workspace" component={WorkspaceScreen} />
       <Tab.Screen name="ToDo" component={TodoScreen} />
       <Tab.Screen name="Completed" component={CompletedScreen} />
-      {isAdmin && (
-        <Tab.Screen name="Users" component={UsersScreen} />
-      )}
+      {isAdmin && <Tab.Screen name="Users" component={UsersScreen} />}
       <Tab.Screen name="Profile">
-        {(props) => (
-          <ProfileScreen {...props} setIsLoggedIn={setIsLoggedIn} />
-        )}
+        {(props) => <ProfileScreen {...props} setIsLoggedIn={setIsLoggedIn} />}
       </Tab.Screen>
     </Tab.Navigator>
   );

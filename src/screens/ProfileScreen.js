@@ -1,7 +1,11 @@
 import { View, Text, Button, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useContext } from "react";
+import { WorkspaceContext } from "../context/WorkspaceContext";
 
 export default function ProfileScreen({ setIsLoggedIn }) {
+  const { changeWorkspace } = useContext(WorkspaceContext); // ✅ reset context too
+
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure?", [
       { text: "Cancel", style: "cancel" },
@@ -9,9 +13,8 @@ export default function ProfileScreen({ setIsLoggedIn }) {
         text: "Logout",
         onPress: async () => {
           await AsyncStorage.removeItem("token");
-          await AsyncStorage.removeItem("workspaceId");
-
-          setIsLoggedIn(false); // ✅ THIS is key
+          await changeWorkspace(null); // ✅ clears both AsyncStorage AND context state
+          setIsLoggedIn(false);
         },
       },
     ]);
