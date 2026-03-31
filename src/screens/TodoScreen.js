@@ -22,9 +22,19 @@ export default function TodoScreen() {
 
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
+
   const [title, setTitle] = useState("");
   const [showForm, setShowForm] = useState(false);
+
   const [workspaces, setWorkspaces] = useState([]);
+
+  // ✅ Edit state
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+
+  // ✅ Complete state
+  const [completingTaskId, setCompletingTaskId] = useState(null);
+  const [completionDescription, setCompletionDescription] = useState("");
 
   const abortControllerRef = useRef(null);
 
@@ -53,7 +63,6 @@ export default function TodoScreen() {
       });
       setWorkspaces(res.data);
     } catch (err) {
-      console.log(err);
       Alert.alert("Error", "Failed to load workspaces");
     }
   };
@@ -85,9 +94,9 @@ export default function TodoScreen() {
 
       setTasks(res.data);
     } catch (err) {
-      if (err.name === "CanceledError") return;
-      console.log(err);
-      Alert.alert("Error", "Failed to load tasks");
+      if (err.name !== "CanceledError") {
+        Alert.alert("Error", "Failed to load tasks");
+      }
     } finally {
       setLoading(false);
     }
@@ -111,25 +120,90 @@ export default function TodoScreen() {
       setTitle("");
       setShowForm(false);
       fetchTasks();
-    } catch (err) {
-      console.log(err);
+    } catch {
       Alert.alert("Error", "Failed to create task");
     }
   };
 
-  const handleCompleteTask = async (taskId) => {
+  // ✏️ EDIT TASK
+  const handleEditPress = (task) => {
+    setEditingTaskId(task.id);
+    setEditTitle(task.title);
+  };
+
+  const handleEditSave = async () => {
+    if (!editTitle.trim()) {
+      Alert.alert("Validation", "Title cannot be empty");
+      return;
+    }
+
+    try {
+      const token = await AsyncStorage.getItem("token");
+
+      await axios.put(
+        `${API_URL}/api/workspace/task/update/${editingTaskId}/`,
+        { title: editTitle.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setEditingTaskId(null);
+      setEditTitle("");
+      fetchTasks();
+    } catch {
+      Alert.alert("Error", "Failed to update task");
+    }
+  };
+
+  // 🗑 DELETE TASK
+  const handleDelete = (taskId) => {
+    Alert.alert("Delete Task", "Are you sure?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const token = await AsyncStorage.getItem("token");
+
+            await axios.delete(
+              `${API_URL}/api/workspace/task/delete/${taskId}/`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            fetchTasks();
+          } catch {
+            Alert.alert("Error", "Failed to delete task");
+          }
+        },
+      },
+    ]);
+  };
+
+  // ✅ COMPLETE TASK
+  const handleCompletePress = (taskId) => {
+    setCompletingTaskId(taskId);
+    setCompletionDescription("");
+  };
+
+  const handleCompleteSubmit = async () => {
+    if (!completionDescription.trim()) {
+      Alert.alert("Validation", "Description required");
+      return;
+    }
+
     try {
       const token = await AsyncStorage.getItem("token");
 
       await axios.post(
-        `${API_URL}/api/workspace/task/complete/${taskId}/`,
-        {},
+        `${API_URL}/api/workspace/task/complete/${completingTaskId}/`,
+        { description: completionDescription.trim() },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      setCompletingTaskId(null);
+      setCompletionDescription("");
       fetchTasks();
-    } catch (err) {
-      console.log(err);
+    } catch {
       Alert.alert("Error", "Failed to complete task");
     }
   };
@@ -139,43 +213,24 @@ export default function TodoScreen() {
     changeWorkspace(value);
   };
 
-  // ✅ LOADED GUARD
   if (!loaded) {
-    return (
-      <SafeAreaView>
-        <ActivityIndicator size="large" />
-      </SafeAreaView>
-    );
+    return <ActivityIndicator size="large" />;
   }
 
   return (
     <SafeAreaView style={{ flex: 1, padding: 20 }}>
-      <Picker
-        selectedValue={workspaceId || ""}
-        onValueChange={handlePickerChange}
-      >
+      <Picker selectedValue={workspaceId || ""} onValueChange={handlePickerChange}>
         <Picker.Item label="Select Workspace" value="" />
         {workspaces.map((ws) => (
-          <Picker.Item
-            key={ws.id}
-            label={ws.name}
-            value={ws.id.toString()}
-          />
+          <Picker.Item key={ws.id} label={ws.name} value={ws.id.toString()} />
         ))}
       </Picker>
 
       {loading ? (
         <ActivityIndicator size="large" />
-      ) : !workspaceId ? (
-        <Text>Please select a workspace first</Text>
       ) : (
         <>
-          <Text style={{ fontSize: 20 }}>Pending Tasks</Text>
-
-          <Button
-            title="Create Task"
-            onPress={() => setShowForm(!showForm)}
-          />
+          <Button title="Create Task" onPress={() => setShowForm(!showForm)} />
 
           {showForm && (
             <View style={{ marginVertical: 10 }}>
@@ -185,34 +240,66 @@ export default function TodoScreen() {
                 onChangeText={setTitle}
                 style={{ borderWidth: 1, padding: 8 }}
               />
-              <Button title="Submit Task" onPress={handleCreateTask} />
+              <Button title="Submit" onPress={handleCreateTask} />
             </View>
           )}
 
-          {tasks.length === 0 ? (
-            <Text>No tasks found</Text>
-          ) : (
-            <FlatList
-              data={tasks}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => (
-                <View
-                  style={{
-                    padding: 15,
-                    borderWidth: 1,
-                    marginVertical: 5,
-                  }}
-                >
-                  <Text>{item.title}</Text>
-                  <Text>{item.description}</Text>
-                  <Button
-                    title="Complete"
-                    onPress={() => handleCompleteTask(item.id)}
-                  />
-                </View>
-              )}
-            />
-          )}
+          <FlatList
+            data={tasks}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={({ item }) => (
+              <View style={{ padding: 15, borderWidth: 1, marginVertical: 5 }}>
+                
+                {/* ✏️ EDIT MODE */}
+                {editingTaskId === item.id ? (
+                  <>
+                    <TextInput
+                      value={editTitle}
+                      onChangeText={setEditTitle}
+                      style={{ borderWidth: 1, padding: 8, marginBottom: 10 }}
+                    />
+                    <Button title="Save" onPress={handleEditSave} />
+                    <Button
+                      title="Cancel"
+                      onPress={() => setEditingTaskId(null)}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Text style={{ fontWeight: "bold" }}>{item.title}</Text>
+
+                    {/* COMPLETE */}
+                    {completingTaskId === item.id ? (
+                      <>
+                        <TextInput
+                          placeholder="Completion note"
+                          value={completionDescription}
+                          onChangeText={setCompletionDescription}
+                          style={{ borderWidth: 1, padding: 8, marginVertical: 10 }}
+                        />
+                        <Button title="Submit" onPress={handleCompleteSubmit} />
+                      </>
+                    ) : (
+                      <Button
+                        title="Complete"
+                        onPress={() => handleCompletePress(item.id)}
+                      />
+                    )}
+
+                    {/* ACTION BUTTONS */}
+                    <View style={{ flexDirection: "row", marginTop: 10, gap: 10 }}>
+                      <Button title="Edit" onPress={() => handleEditPress(item)} />
+                      <Button
+                        title="Delete"
+                        color="red"
+                        onPress={() => handleDelete(item.id)}
+                      />
+                    </View>
+                  </>
+                )}
+              </View>
+            )}
+          />
         </>
       )}
     </SafeAreaView>
